@@ -1,0 +1,20 @@
+# Default-deny: any tool not listed here is blocked.
+default_action: deny
+injection_threshold: 5          # block when the summed rule weight reaches this
+args_pii_action: block          # PII/secrets in tool-call arguments: block | redact | allow
+results_pii_action: redact      # PII/secrets in tool results: redact | block | allow
+approval_timeout_s: 30
+
+inspect:
+  arguments: true
+  results: true
+  tool_descriptions: true       # drops poisoned or silently-changed tool definitions
+
+tools:
+  search_notes: {action: allow}
+  read_file:    {action: allow}
+  get_customer: {action: allow}
+  send_email:                    # write action: a human approves each call
+    action: require_approval
+    allow_rules: [email]         # an email address is expected here; other PII is not
+  delete_file:  {action: deny}
