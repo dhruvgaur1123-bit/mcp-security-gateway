@@ -183,12 +183,17 @@ class Gateway:
             except json.JSONDecodeError:
                 self._to_server(line)
                 continue
-            if isinstance(msg, dict) and msg.get("method") == "tools/call":
-                self._handle_call(msg)
-            else:
-                if isinstance(msg, dict) and msg.get("method") == "tools/list" and "id" in msg:
-                    self._list_ids.add(msg["id"])
-                self._to_server(line)
+            try:
+                if isinstance(msg, dict) and msg.get("method") == "tools/call":
+                    self._handle_call(msg)
+                else:
+                    if isinstance(msg, dict) and msg.get("method") == "tools/list" and "id" in msg:
+                        self._list_ids.add(msg["id"])
+                    self._to_server(line)
+            except Exception as e:   # fail closed: tell the client instead of silently dropping the request
+                print(f"[mcpgw] internal error handling message: {e!r}", file=sys.stderr)
+                if isinstance(msg, dict) and msg.get("id") is not None:
+                    self._to_client(blocked_result(msg["id"], "gateway internal error (request not forwarded)"))
         if self.proc and self.proc.stdin:   # client closed: let the server shut down
             try:
                 self.proc.stdin.close()
